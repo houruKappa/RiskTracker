@@ -1,0 +1,1001 @@
+openapi: 3.0.3
+info:
+  title: RiskTracker API
+  description: Risk Management System API
+  version: 1.0.0
+  contact:
+    name: RiskTracker Team
+
+servers:
+  - url: http://localhost:8080
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        full_name:
+          type: string
+        role:
+          type: string
+          enum: [USER, ADMIN]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+
+    RiskLevel:
+      type: string
+      enum: [LOW, MEDIUM, HIGH, CRITICAL]
+
+    RiskStatus:
+      type: string
+      enum: [IN_PROGRESS, COMPLETED]
+
+    RiskObjectType:
+      type: string
+      enum: [IT_SYSTEM, PROJECT, PROCESS]
+
+    RiskObject:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        object_type:
+          $ref: '#/components/schemas/RiskObjectType'
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateObjectRequest:
+      type: object
+      required: [name, object_type]
+      properties:
+        name:
+          type: string
+        object_type:
+          $ref: '#/components/schemas/RiskObjectType'
+        description:
+          type: string
+
+    RiskCause:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        probability:
+          $ref: '#/components/schemas/RiskLevel'
+
+    RiskConsequence:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        probability:
+          $ref: '#/components/schemas/RiskLevel'
+
+    Risk:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/RiskStatus'
+        title:
+          type: string
+        target_id:
+          type: string
+        owner_id:
+          type: string
+        probability:
+          $ref: '#/components/schemas/RiskLevel'
+        impact:
+          $ref: '#/components/schemas/RiskLevel'
+        financial_loss:
+          type: string
+        reputational_loss:
+          $ref: '#/components/schemas/RiskLevel'
+        legal_consequences:
+          type: integer
+        comment:
+          type: string
+        max_cause_probability:
+          $ref: '#/components/schemas/RiskLevel'
+        max_consequence_probability:
+          $ref: '#/components/schemas/RiskLevel'
+        causes:
+          type: array
+          items:
+            $ref: '#/components/schemas/RiskCause'
+        consequences:
+          type: array
+          items:
+            $ref: '#/components/schemas/RiskConsequence'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateRiskRequest:
+      type: object
+      required: [title, target_id, owner_id, probability, impact]
+      properties:
+        title:
+          type: string
+        target_id:
+          type: string
+        owner_id:
+          type: string
+        probability:
+          $ref: '#/components/schemas/RiskLevel'
+        impact:
+          $ref: '#/components/schemas/RiskLevel'
+        financial_loss:
+          type: string
+        reputational_loss:
+          $ref: '#/components/schemas/RiskLevel'
+        legal_consequences:
+          type: integer
+        comment:
+          type: string
+        causes:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              description:
+                type: string
+              probability:
+                $ref: '#/components/schemas/RiskLevel'
+        consequences:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              description:
+                type: string
+              probability:
+                $ref: '#/components/schemas/RiskLevel'
+
+    UpdateStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/RiskStatus'
+
+    PaginatedRisks:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Risk'
+        total_count:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    CountermeasureTarget:
+      type: string
+      enum: [CAUSE, CONSEQUENCE]
+
+    Countermeasure:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        risk_id:
+          type: string
+        target_type:
+          $ref: '#/components/schemas/CountermeasureTarget'
+        cause_id:
+          type: string
+        consequence_id:
+          type: string
+        description:
+          type: string
+        assignee_id:
+          type: string
+        deadline:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    CreateCountermeasureRequest:
+      type: object
+      required: [risk_id, target_type, description, assignee_id, deadline]
+      properties:
+        risk_id:
+          type: string
+        target_type:
+          $ref: '#/components/schemas/CountermeasureTarget'
+        cause_id:
+          type: string
+        consequence_id:
+          type: string
+        description:
+          type: string
+        assignee_id:
+          type: string
+        deadline:
+          type: string
+          format: date-time
+
+    ReportSummary:
+      type: object
+      properties:
+        total_risks:
+          type: integer
+        in_progress_risks:
+          type: integer
+        completed_risks:
+          type: integer
+        expired_countermeasures:
+          type: integer
+        expiring_soon_countermeasures:
+          type: integer
+
+    ReportItem:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        target_name:
+          type: string
+        target_type:
+          $ref: '#/components/schemas/RiskObjectType'
+        owner_name:
+          type: string
+        status:
+          $ref: '#/components/schemas/RiskStatus'
+        probability:
+          $ref: '#/components/schemas/RiskLevel'
+        impact:
+          $ref: '#/components/schemas/RiskLevel'
+        max_cause_probability:
+          $ref: '#/components/schemas/RiskLevel'
+        max_consequence_probability:
+          $ref: '#/components/schemas/RiskLevel'
+        countermeasures:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              description:
+                type: string
+              assignee_name:
+                type: string
+              deadline:
+                type: string
+              is_expired:
+                type: boolean
+              is_expiring_soon:
+                type: boolean
+              target_type:
+                $ref: '#/components/schemas/CountermeasureTarget'
+        created_at:
+          type: string
+
+    PaginatedReport:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportItem'
+        total_count:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+        action_type:
+          type: string
+          enum: [CREATE, UPDATE, DELETE]
+        changed_by_user_id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        old_state:
+          type: object
+        new_state:
+          type: object
+
+    PaginatedAuditLogs:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLog'
+        total_count:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      tags: [System]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+
+  /api/v1/auth/login:
+    post:
+      summary: Login
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/logout:
+    post:
+      summary: Logout
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Logged out
+
+  /api/v1/users/me:
+    get:
+      summary: Get current user
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /api/v1/objects:
+    get:
+      summary: List risk objects
+      tags: [Risk Objects]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RiskObject'
+
+  /api/v1/admin/objects:
+    post:
+      summary: Create risk object (admin)
+      tags: [Risk Objects]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateObjectRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskObject'
+        '403':
+          description: Forbidden
+
+  /api/v1/admin/objects/{id}:
+    put:
+      summary: Update risk object (admin)
+      tags: [Risk Objects]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateObjectRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskObject'
+    delete:
+      summary: Delete risk object (admin)
+      tags: [Risk Objects]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+
+  /api/v1/risks:
+    get:
+      summary: List risks (paginated)
+      tags: [Risks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [IN_PROGRESS, COMPLETED]
+        - name: target_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRisks'
+    post:
+      summary: Create risk
+      tags: [Risks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRiskRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Risk'
+
+  /api/v1/risks/{id}:
+    get:
+      summary: Get risk by ID
+      tags: [Risks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Risk'
+    put:
+      summary: Update risk
+      tags: [Risks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRiskRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Risk'
+
+  /api/v1/risks/{id}/status:
+    patch:
+      summary: Update risk status
+      tags: [Risks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStatusRequest'
+      responses:
+        '200':
+          description: OK
+
+  /api/v1/risks/{id}/causes:
+    get:
+      summary: List causes for a risk
+      tags: [Risks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RiskCause'
+    post:
+      summary: Add cause to risk
+      tags: [Risks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, probability]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                probability:
+                  $ref: '#/components/schemas/RiskLevel'
+      responses:
+        '201':
+          description: Created
+
+  /api/v1/risks/{id}/consequences:
+    post:
+      summary: Add consequence to risk
+      tags: [Risks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, probability]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                probability:
+                  $ref: '#/components/schemas/RiskLevel'
+      responses:
+        '201':
+          description: Created
+
+  /api/v1/risks/{id}/causes/{cause_id}:
+    delete:
+      summary: Delete a cause from a risk
+      tags: [Risks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: cause_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+        '403':
+          description: Access denied
+
+  /api/v1/risks/{id}/consequences/{consequence_id}:
+    delete:
+      summary: Delete a consequence from a risk
+      tags: [Risks]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: consequence_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+        '403':
+          description: Access denied
+
+  /api/v1/countermeasures:
+    post:
+      summary: Create countermeasure
+      tags: [Countermeasures]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCountermeasureRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Countermeasure'
+
+  /api/v1/countermeasures/{id}:
+    get:
+      summary: Get countermeasure by ID
+      tags: [Countermeasures]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Countermeasure'
+    put:
+      summary: Update countermeasure
+      tags: [Countermeasures]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [description, assignee_id, deadline]
+              properties:
+                description:
+                  type: string
+                assignee_id:
+                  type: string
+                deadline:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: OK
+    delete:
+      summary: Delete countermeasure
+      tags: [Countermeasures]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+
+  /api/v1/risks/{risk_id}/countermeasures:
+    get:
+      summary: List countermeasures by risk
+      tags: [Countermeasures]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: risk_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Countermeasure'
+
+  /api/v1/reports/summary:
+    get:
+      summary: Get report summary
+      tags: [Reports]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportSummary'
+
+  /api/v1/reports/detail:
+    get:
+      summary: Get detailed report (paginated)
+      tags: [Reports]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: target_id
+          in: query
+          schema:
+            type: string
+        - name: owner_id
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReport'
+
+  /api/v1/logs:
+    get:
+      summary: List audit logs (admin, paginated)
+      tags: [Audit Logs]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: entity_type
+          in: query
+          schema:
+            type: string
+        - name: action_type
+          in: query
+          schema:
+            type: string
+            enum: [CREATE, UPDATE, DELETE]
+        - name: user_id
+          in: query
+          schema:
+            type: string
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAuditLogs'
+        '403':
+          description: Forbidden
