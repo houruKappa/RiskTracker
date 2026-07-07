@@ -6,15 +6,23 @@ import (
 	"net/http"
 
 	"github.com/houruKappa/RiskTracker/internal/domain"
+	"github.com/houruKappa/RiskTracker/internal/delivery/http/middleware"
+	"github.com/houruKappa/RiskTracker/internal/usecase"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type UserHandler struct {
 	userRepo domain.UserRepository
+	auditSvc *usecase.AuditService
 }
 
-func NewUserHandler(userRepo domain.UserRepository) *UserHandler {
-	return &UserHandler{userRepo: userRepo}
+func NewUserHandler(userRepo domain.UserRepository, auditSvc *usecase.AuditService) *UserHandler {
+	return &UserHandler{userRepo: userRepo, auditSvc: auditSvc}
+}
+
+func (h *UserHandler) getUserID(r *http.Request) string {
+	id, _ := r.Context().Value(middleware.CtxUserID).(string)
+	return id
 }
 
 func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -96,6 +104,10 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
 		return
+	}
+
+	if h.auditSvc != nil {
+		_ = h.auditSvc.Log(r.Context(), "USER", user.ID, user.Email, domain.ActionCreate, h.getUserID(r), "", nil, nil)
 	}
 
 	writeJSON(w, http.StatusCreated, user)

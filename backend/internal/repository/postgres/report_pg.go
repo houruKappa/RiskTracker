@@ -147,6 +147,14 @@ func (r *ReportPGRepo) GetDetailed(ctx context.Context, filter domain.ReportFilt
 		args = append(args, *filter.DateTo)
 		argIdx++
 	}
+	if filter.Search != nil && *filter.Search != "" {
+		conditions = append(conditions, fmt.Sprintf(
+			"(r.title ILIKE $%d OR r.id::text ILIKE $%d OR u.full_name ILIKE $%d)",
+			argIdx, argIdx, argIdx,
+		))
+		args = append(args, "%"+*filter.Search+"%")
+		argIdx++
+	}
 
 	whereClause := ""
 	if len(conditions) > 0 {

@@ -43,7 +43,7 @@ func (m *mockRiskObjectRepo) Update(ctx context.Context, obj *domain.RiskObject)
 
 func TestRiskObjectList_Success(t *testing.T) {
 	mockRepo := new(mockRiskObjectRepo)
-	uc := usecase.NewRiskObjectUsecase(mockRepo)
+	uc := usecase.NewRiskObjectUsecase(mockRepo, nil)
 	handler := NewRiskObjectHandler(uc)
 
 	objects := []*domain.RiskObject{
@@ -67,7 +67,7 @@ func TestRiskObjectList_Success(t *testing.T) {
 
 func TestRiskObjectCreate_Success(t *testing.T) {
 	mockRepo := new(mockRiskObjectRepo)
-	uc := usecase.NewRiskObjectUsecase(mockRepo)
+	uc := usecase.NewRiskObjectUsecase(mockRepo, nil)
 	handler := NewRiskObjectHandler(uc)
 
 	mockRepo.On("Create", mock.Anything, mock.MatchedBy(func(obj *domain.RiskObject) bool {
@@ -92,7 +92,7 @@ func TestRiskObjectCreate_Success(t *testing.T) {
 
 func TestRiskObjectCreate_DuplicateName(t *testing.T) {
 	mockRepo := new(mockRiskObjectRepo)
-	uc := usecase.NewRiskObjectUsecase(mockRepo)
+	uc := usecase.NewRiskObjectUsecase(mockRepo, nil)
 	handler := NewRiskObjectHandler(uc)
 
 	mockRepo.On("Create", mock.Anything, mock.Anything).Return(domain.ErrDuplicateName)
@@ -114,7 +114,7 @@ func TestRiskObjectCreate_DuplicateName(t *testing.T) {
 
 func TestRiskObjectCreate_InvalidBody(t *testing.T) {
 	mockRepo := new(mockRiskObjectRepo)
-	uc := usecase.NewRiskObjectUsecase(mockRepo)
+	uc := usecase.NewRiskObjectUsecase(mockRepo, nil)
 	handler := NewRiskObjectHandler(uc)
 
 	body := bytes.NewBufferString(`{"name":"","object_type":"INVALID"}`)
@@ -129,7 +129,7 @@ func TestRiskObjectCreate_InvalidBody(t *testing.T) {
 
 func TestRiskObjectUpdate_Success(t *testing.T) {
 	mockRepo := new(mockRiskObjectRepo)
-	uc := usecase.NewRiskObjectUsecase(mockRepo)
+	uc := usecase.NewRiskObjectUsecase(mockRepo, nil)
 	handler := NewRiskObjectHandler(uc)
 
 	mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(obj *domain.RiskObject) bool {
@@ -150,7 +150,7 @@ func TestRiskObjectUpdate_Success(t *testing.T) {
 
 func TestRiskObjectUpdate_NotFound(t *testing.T) {
 	mockRepo := new(mockRiskObjectRepo)
-	uc := usecase.NewRiskObjectUsecase(mockRepo)
+	uc := usecase.NewRiskObjectUsecase(mockRepo, nil)
 	handler := NewRiskObjectHandler(uc)
 
 	mockRepo.On("Update", mock.Anything, mock.Anything).Return(domain.ErrNotFound)

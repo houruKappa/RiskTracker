@@ -2,6 +2,7 @@ package v1
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -59,6 +60,16 @@ func (h *AuditLogHandler) List(w http.ResponseWriter, r *http.Request) {
 		userFilter = &u
 	}
 
+	var userEmailFilter *string
+	if e := query.Get("user_email"); e != "" {
+		userEmailFilter = &e
+	}
+
+	var searchFilter *string
+	if s := query.Get("search"); s != "" {
+		searchFilter = &s
+	}
+
 	var dateFromFilter *string
 	if df := query.Get("date_from"); df != "" {
 		dateFromFilter = &df
@@ -75,6 +86,8 @@ func (h *AuditLogHandler) List(w http.ResponseWriter, r *http.Request) {
 		EntityType:      entityTypeFilter,
 		ActionType:      actionTypeFilter,
 		ChangedByUserID: userFilter,
+		UserEmail:       userEmailFilter,
+		Search:          searchFilter,
 		DateFrom:        dateFromFilter,
 		DateTo:          dateToFilter,
 		UserID:          userID,
@@ -87,6 +100,7 @@ func (h *AuditLogHandler) List(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusForbidden, map[string]string{"error": "access denied"})
 			return
 		}
+		log.Printf("audit logs list error: %v", err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
 		return
 	}

@@ -27,6 +27,7 @@ type ReportFilter struct {
 	DateTo    *string     `json:"date_to,omitempty"`
 	UserID    string      `json:"-"`
 	Role      string      `json:"-"`
+	Search    *string     `json:"search,omitempty"`
 }
 
 type PaginatedReport struct {

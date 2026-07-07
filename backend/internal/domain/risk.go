@@ -125,6 +125,7 @@ type RiskFilter struct {
 	TargetID *string     `json:"target_id"`
 	OwnerID  string      `json:"-"`
 	Role     string      `json:"-"`
+	Search   *string     `json:"search,omitempty"`
 }
 
 type RiskObjectRepository interface {

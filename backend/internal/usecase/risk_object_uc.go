@@ -7,18 +7,19 @@ import (
 )
 
 type RiskObjectUsecase struct {
-	repo domain.RiskObjectRepository
+	repo     domain.RiskObjectRepository
+	auditSvc *AuditService
 }
 
-func NewRiskObjectUsecase(repo domain.RiskObjectRepository) *RiskObjectUsecase {
-	return &RiskObjectUsecase{repo: repo}
+func NewRiskObjectUsecase(repo domain.RiskObjectRepository, auditSvc *AuditService) *RiskObjectUsecase {
+	return &RiskObjectUsecase{repo: repo, auditSvc: auditSvc}
 }
 
 func (u *RiskObjectUsecase) List(ctx context.Context) ([]*domain.RiskObject, error) {
 	return u.repo.List(ctx)
 }
 
-func (u *RiskObjectUsecase) Create(ctx context.Context, obj *domain.RiskObject) error {
+func (u *RiskObjectUsecase) Create(ctx context.Context, obj *domain.RiskObject, userID string) error {
 	if obj.Name == "" {
 		return domain.ErrValidation
 	}
@@ -27,20 +28,37 @@ func (u *RiskObjectUsecase) Create(ctx context.Context, obj *domain.RiskObject) 
 		obj.ObjectType != domain.ObjectTypeProcess {
 		return domain.ErrValidation
 	}
-	return u.repo.Create(ctx, obj)
+	if err := u.repo.Create(ctx, obj); err != nil {
+		return err
+	}
+	if u.auditSvc != nil {
+		_ = u.auditSvc.Log(ctx, "RISK_OBJECT", obj.ID, obj.Name, domain.ActionCreate, userID, "", nil, obj)
+	}
+	return nil
 }
 
-func (u *RiskObjectUsecase) Update(ctx context.Context, obj *domain.RiskObject) error {
+func (u *RiskObjectUsecase) Update(ctx context.Context, obj *domain.RiskObject, userID string) error {
 	if obj.Name == "" {
 		return domain.ErrValidation
 	}
-	return u.repo.Update(ctx, obj)
+	if err := u.repo.Update(ctx, obj); err != nil {
+		return err
+	}
+	if u.auditSvc != nil {
+		_ = u.auditSvc.Log(ctx, "RISK_OBJECT", obj.ID, obj.Name, domain.ActionUpdate, userID, "", nil, obj)
+	}
+	return nil
 }
 
 func (u *RiskObjectUsecase) GetByID(ctx context.Context, id string) (*domain.RiskObject, error) {
 	return u.repo.GetByID(ctx, id)
 }
 
-func (u *RiskObjectUsecase) Delete(ctx context.Context, id string) error {
+func (u *RiskObjectUsecase) Delete(ctx context.Context, id, userID string) error {
+	if u.auditSvc != nil {
+		if obj, err := u.repo.GetByID(ctx, id); err == nil {
+			_ = u.auditSvc.Log(ctx, "RISK_OBJECT", id, obj.Name, domain.ActionDelete, userID, "", nil, nil)
+		}
+	}
 	return u.repo.Delete(ctx, id)
 }

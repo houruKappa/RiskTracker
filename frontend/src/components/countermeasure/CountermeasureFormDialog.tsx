@@ -2,21 +2,16 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { countermeasureService } from '@/lib/api-services';
-import { userService } from '@/lib/api-services';
+import { Autocomplete } from '@/components/ui/Autocomplete';
+import { countermeasureService, userService } from '@/lib/api-services';
 import type { User } from '@/types/api';
-import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Loader2, Plus, X } from 'lucide-react';
+import { useLanguage } from '@/lib/language-context';
 
 interface CountermeasureFormDialogProps {
   riskId: string;
@@ -27,9 +22,11 @@ interface CountermeasureFormDialogProps {
 
 export function CountermeasureFormDialog({ riskId, targetType, targetId, onSuccess }: CountermeasureFormDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [deadline, setDeadline] = useState<string>('');
+  const [deadline, setDeadline] = useState('');
+  const [description, setDescription] = useState('');
+  const [assigneeId, setAssigneeId] = useState('');
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
 
   const { data: usersData } = useQuery({
     queryKey: ['users'],
@@ -49,138 +46,139 @@ export function CountermeasureFormDialog({ riskId, targetType, targetId, onSucce
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['countermeasures'] });
       queryClient.invalidateQueries({ queryKey: ['risks'] });
-      toast.success('Countermeasure created successfully');
+      toast.success(t.risk.countermeasureCreated);
+      setDescription('');
+      setAssigneeId('');
+      setDeadline('');
       setIsOpen(false);
       onSuccess?.();
     },
     onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : 'Failed to create countermeasure';
-      toast.error(message);
-    },
-    onSettled: () => {
-      setIsLoading(false);
+      console.error('Countermeasure create error:', error);
+      const axiosError = error as { response?: { data?: { error?: string } } };
+      const msg = axiosError?.response?.data?.error || (error instanceof Error ? error.message : t.common.error);
+      toast.error(msg);
     },
   });
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+    console.log('Submitting countermeasure:', { description, assigneeId, deadline });
 
-    const data = {
+    if (!description.trim() || !assigneeId || !deadline) {
+      console.warn('Validation failed:', { description: description.trim(), assigneeId, deadline });
+      toast.error(t.common.error);
+      return;
+    }
+
+    createMutation.mutate({
       risk_id: riskId,
       target_type: targetType,
       cause_id: targetType === 'CAUSE' ? targetId : undefined,
       consequence_id: targetType === 'CONSEQUENCE' ? targetId : undefined,
-      description: formData.get('description') as string,
-      assignee_id: formData.get('assignee_id') as string,
-      deadline,
-    };
-
-    if (!data.description || !data.assignee_id || !data.deadline) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
-    setIsLoading(true);
-    createMutation.mutate(data);
+      description: description.trim(),
+      assignee_id: assigneeId,
+      deadline: deadline + 'T23:59:59Z',
+    });
   };
 
-  const handleOpenChange = (open: boolean) => {
-    setIsOpen(open);
-    if (!open) {
-      setDeadline('');
-    }
-  };
+  const userOptions = (usersData || []).map((u: User) => ({
+    label: u.full_name,
+    value: u.id,
+    subtitle: u.email,
+  }));
+
+  const isLoading = createMutation.isPending;
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-        <DialogTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-1">
-            + Add Countermeasure
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Countermeasure</DialogTitle>
-            <DialogDescription>
-              Define a mitigation action for this {targetType.toLowerCase()}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="description">Description *</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  rows={3}
-                  placeholder="Describe the countermeasure action"
-                  required
-                  disabled={isLoading}
-                />
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-1 border-pink-200 text-gray-700 hover:bg-pink-100/50 hover:border-pink-300 text-xs"
+        onClick={() => setIsOpen(true)}
+      >
+        <Plus className="h-3 w-3" />
+        {t.risk.addCountermeasure}
+      </Button>
+
+      {isOpen && (
+        <div className="fixed inset-0 z-50" onClick={() => { setIsOpen(false); setDescription(''); setAssigneeId(''); setDeadline(''); }}>
+          <div className="absolute bottom-6 right-6 w-[480px] max-h-[calc(100vh-3rem)]" onClick={e => e.stopPropagation()}>
+            <div className="bg-pink-50/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-pink-200/60 overflow-hidden flex flex-col max-h-[calc(100vh-3rem)]">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-pink-200/50 bg-gradient-to-r from-pink-200/40 to-transparent">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-pink-300/40 flex items-center justify-center">
+                    <Plus className="h-4 w-4 text-pink-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 text-sm">{t.risk.addCountermeasure}</h3>
+                    <p className="text-xs text-pink-500/70">
+                      {targetType === 'CAUSE' ? t.risk.forThisCause : t.risk.forThisConsequence}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setIsOpen(false); setDescription(''); setAssigneeId(''); setDeadline(''); }}
+                  className="h-7 w-7 rounded-lg hover:bg-pink-300/30 flex items-center justify-center transition-colors"
+                >
+                  <X className="h-4 w-4 text-gray-500" />
+                </button>
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="assignee_id">Assignee *</Label>
-                <Select name="assignee_id" required disabled={isLoading}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select assignee" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {usersData?.map((user: User) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.full_name} ({user.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <div className="flex-1 overflow-y-auto px-5 py-4">
+                <form onSubmit={handleSubmit}>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <Label className="text-gray-700 text-xs font-medium">{t.risk.countermeasureDescription} *</Label>
+                      <Textarea
+                        value={description}
+                        onChange={e => setDescription(e.target.value)}
+                        rows={3}
+                        placeholder={t.risk.countermeasureDescription}
+                        className="bg-white/70 border-pink-200 text-gray-900 placeholder:text-gray-400 text-sm focus:border-pink-400"
+                      />
+                    </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="deadline">Deadline *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Input
-                      id="deadline"
-                      name="deadline"
-                      value={deadline}
-                      readOnly
-                      required
-                      disabled={isLoading}
-                      placeholder="Select deadline"
-                    />
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={undefined}
-                      onSelect={(date) => {
-                        if (date) {
-                          setDeadline(format(date, 'yyyy-MM-dd'));
-                        }
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
+                    <div className="flex flex-col gap-1.5">
+                      <Label className="text-gray-700 text-xs font-medium">{t.risk.countermeasureAssignee} *</Label>
+                      <Autocomplete
+                        options={userOptions}
+                        value={assigneeId}
+                        onChange={setAssigneeId}
+                        placeholder={t.risk.countermeasureAssignee}
+                        className="bg-white/70 border-pink-200 text-gray-900"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <Label className="text-gray-700 text-xs font-medium">{t.risk.countermeasureDeadline} *</Label>
+                      <Input
+                        type="date"
+                        value={deadline}
+                        onChange={(e) => setDeadline(e.target.value)}
+                        className="bg-white/70 border-pink-200 text-gray-900 text-sm focus:border-pink-400"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-pink-200/50">
+                    <Button type="button" variant="ghost" size="sm" onClick={() => { setIsOpen(false); setDescription(''); setAssigneeId(''); setDeadline(''); }} className="text-gray-600 hover:bg-pink-100/50 text-xs">
+                      {t.common.cancel}
+                    </Button>
+                    <Button type="submit" disabled={isLoading} size="sm" className="bg-pink-500 hover:bg-pink-600 text-white text-xs">
+                      {isLoading ? (
+                        <><Loader2 className="h-3 w-3 animate-spin mr-1" /> {t.common.saving}</>
+                      ) : t.risk.addCountermeasure}
+                    </Button>
+                  </div>
+                </form>
               </div>
             </div>
-            <DialogFooter className="border-t border-border">
-              <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Creating...
-                  </>
-                ) : (
-                  'Add Countermeasure'
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+      )}
     </>
   );
 }

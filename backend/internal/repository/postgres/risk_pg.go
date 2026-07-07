@@ -194,6 +194,14 @@ func (r *RiskPGRepo) List(ctx context.Context, filter domain.RiskFilter) (*domai
 		args = append(args, filter.OwnerID)
 		argIdx++
 	}
+	if filter.Search != nil && *filter.Search != "" {
+		conditions = append(conditions, fmt.Sprintf(
+			"(r.title ILIKE $%d OR r.id::text ILIKE $%d OR EXISTS (SELECT 1 FROM users u WHERE u.id = r.owner_id AND u.full_name ILIKE $%d))",
+			argIdx, argIdx, argIdx,
+		))
+		args = append(args, "%"+*filter.Search+"%")
+		argIdx++
+	}
 
 	where := ""
 	if len(conditions) > 0 {

@@ -173,6 +173,11 @@ func (h *RiskHandler) List(w http.ResponseWriter, r *http.Request) {
 		targetFilter = &t
 	}
 
+	var searchFilter *string
+	if s := query.Get("search"); s != "" {
+		searchFilter = &s
+	}
+
 	filter := domain.RiskFilter{
 		Page:     page,
 		Limit:    limit,
@@ -180,6 +185,7 @@ func (h *RiskHandler) List(w http.ResponseWriter, r *http.Request) {
 		TargetID: targetFilter,
 		OwnerID:  h.getUserID(r),
 		Role:     h.getUserRole(r),
+		Search:   searchFilter,
 	}
 
 	result, err := h.uc.List(r.Context(), filter)

@@ -27,7 +27,7 @@ export const riskObjectService = {
 };
 
 export const riskService = {
-  list: (params?: { page?: number; limit?: number; status?: string; target_id?: string }) => 
+  list: (params?: { page?: number; limit?: number; status?: string; target_id?: string; search?: string }) => 
     api.get<PaginatedRisks>('/api/v1/risks', { params }),
   
   get: (id: string) => 
@@ -122,6 +122,7 @@ export const reportService = {
     status?: string;
     date_from?: string;
     date_to?: string;
+    search?: string;
   }) => api.get<PaginatedReport>('/api/v1/reports/detail', { params }),
   
   auditLogs: (params?: {
@@ -130,6 +131,8 @@ export const reportService = {
     entity_type?: string;
     action_type?: string;
     user_id?: string;
+    user_email?: string;
+    search?: string;
     date_from?: string;
     date_to?: string;
   }) => api.get<{ items: any[]; total_count: number; page: number; limit: number }>('/api/v1/logs', { params }),
@@ -137,7 +140,7 @@ export const reportService = {
 
 export const userService = {
   list: () => 
-    api.get<User[]>('/api/v1/admin/users'),
+    api.get<User[]>('/api/v1/users'),
   
   create: (data: { email: string; full_name: string; password: string; role: 'USER' | 'ADMIN' }) => 
     api.post<User>('/api/v1/admin/users', data),

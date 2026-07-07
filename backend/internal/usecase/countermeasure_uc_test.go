@@ -149,7 +149,7 @@ func TestCountermeasureUsecase_Create(t *testing.T) {
 	cmRepo := new(mockCountermeasureRepo)
 	riskRepo := new(mockRiskRepo)
 	userRepo := new(mockUserRepo)
-	uc := NewCountermeasureUsecase(cmRepo, riskRepo, userRepo)
+	uc := NewCountermeasureUsecase(cmRepo, riskRepo, userRepo, nil)
 
 	ctx := context.Background()
 	userID := "user123"

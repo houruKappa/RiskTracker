@@ -43,7 +43,7 @@ func (u *RiskUsecase) Create(ctx context.Context, risk *domain.Risk, userID stri
 
 	// Audit log
 	if u.auditSvc != nil {
-		_ = u.auditSvc.Log(ctx, "RISK", risk.ID, domain.ActionCreate, userID, nil, risk)
+		_ = u.auditSvc.Log(ctx, "RISK", risk.ID, risk.Title, domain.ActionCreate, userID, "", nil, risk)
 	}
 
 	return risk, nil
@@ -82,23 +82,32 @@ func (u *RiskUsecase) Update(ctx context.Context, risk *domain.Risk, userID, rol
 	}
 
 	if u.auditSvc != nil {
-		_ = u.auditSvc.Log(ctx, "RISK", risk.ID, domain.ActionUpdate, userID, existing, risk)
+		_ = u.auditSvc.Log(ctx, "RISK", risk.ID, risk.Title, domain.ActionUpdate, userID, DiffChanges(existing, risk), existing, risk)
 	}
 
 	return risk, nil
 }
 
 func (u *RiskUsecase) UpdateStatus(ctx context.Context, id, userID, role string, status domain.RiskStatus) error {
-	if role != "ADMIN" {
-		risk, err := u.repo.GetByID(ctx, id, userID, role)
-		if err != nil {
-			return err
-		}
-		if risk.OwnerID != userID {
-			return domain.ErrForbidden
-		}
+	risk, err := u.repo.GetByID(ctx, id, userID, role)
+	if err != nil {
+		return err
 	}
-	return u.repo.UpdateStatus(ctx, id, status)
+	if role != "ADMIN" && risk.OwnerID != userID {
+		return domain.ErrForbidden
+	}
+	oldStatus := risk.Status
+	if oldStatus == status {
+		return nil
+	}
+	if err := u.repo.UpdateStatus(ctx, id, status); err != nil {
+		return err
+	}
+	if u.auditSvc != nil {
+		changes := "status: " + string(oldStatus) + " -> " + string(status)
+		_ = u.auditSvc.Log(ctx, "RISK", id, risk.Title, domain.ActionUpdate, userID, changes, nil, nil)
+	}
+	return nil
 }
 
 func (u *RiskUsecase) AddCause(ctx context.Context, cause *domain.RiskCause, userID, role string) error {
@@ -116,6 +125,9 @@ func (u *RiskUsecase) AddCause(ctx context.Context, cause *domain.RiskCause, use
 	}
 	if err := u.repo.AddCause(ctx, cause); err != nil {
 		return err
+	}
+	if u.auditSvc != nil {
+		_ = u.auditSvc.Log(ctx, "RISK_CAUSE", cause.ID, cause.Name, domain.ActionCreate, userID, "", nil, cause)
 	}
 	return u.recalcMaxProbabilities(ctx, cause.RiskID)
 }
@@ -136,6 +148,9 @@ func (u *RiskUsecase) AddConsequence(ctx context.Context, consequence *domain.Ri
 	if err := u.repo.AddConsequence(ctx, consequence); err != nil {
 		return err
 	}
+	if u.auditSvc != nil {
+		_ = u.auditSvc.Log(ctx, "RISK_CONSEQUENCE", consequence.ID, consequence.Name, domain.ActionCreate, userID, "", nil, consequence)
+	}
 	return u.recalcMaxProbabilities(ctx, consequence.RiskID)
 }
 
@@ -143,8 +158,20 @@ func (u *RiskUsecase) DeleteCause(ctx context.Context, causeID, riskID, userID, 
 	if err := u.checkRiskAccess(ctx, riskID, userID, role); err != nil {
 		return err
 	}
+	name := ""
+	if risk, err := u.repo.GetByID(ctx, riskID, "", "ADMIN"); err == nil {
+		for _, c := range risk.Causes {
+			if c.ID == causeID {
+				name = c.Name
+				break
+			}
+		}
+	}
 	if err := u.repo.DeleteCause(ctx, causeID); err != nil {
 		return err
+	}
+	if u.auditSvc != nil {
+		_ = u.auditSvc.Log(ctx, "RISK_CAUSE", causeID, name, domain.ActionDelete, userID, "", nil, nil)
 	}
 	return u.recalcMaxProbabilities(ctx, riskID)
 }
@@ -153,8 +180,20 @@ func (u *RiskUsecase) DeleteConsequence(ctx context.Context, conseqID, riskID, u
 	if err := u.checkRiskAccess(ctx, riskID, userID, role); err != nil {
 		return err
 	}
+	name := ""
+	if risk, err := u.repo.GetByID(ctx, riskID, "", "ADMIN"); err == nil {
+		for _, c := range risk.Consequences {
+			if c.ID == conseqID {
+				name = c.Name
+				break
+			}
+		}
+	}
 	if err := u.repo.DeleteConsequence(ctx, conseqID); err != nil {
 		return err
+	}
+	if u.auditSvc != nil {
+		_ = u.auditSvc.Log(ctx, "RISK_CONSEQUENCE", conseqID, name, domain.ActionDelete, userID, "", nil, nil)
 	}
 	return u.recalcMaxProbabilities(ctx, riskID)
 }

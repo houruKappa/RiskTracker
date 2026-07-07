@@ -9,16 +9,18 @@ import (
 )
 
 type CountermeasureUsecase struct {
-	cmRepo   domain.CountermeasureRepository
-	riskRepo domain.RiskRepository
-	userRepo domain.UserRepository
+	cmRepo    domain.CountermeasureRepository
+	riskRepo  domain.RiskRepository
+	userRepo  domain.UserRepository
+	auditSvc  *AuditService
 }
 
-func NewCountermeasureUsecase(cmRepo domain.CountermeasureRepository, riskRepo domain.RiskRepository, userRepo domain.UserRepository) *CountermeasureUsecase {
+func NewCountermeasureUsecase(cmRepo domain.CountermeasureRepository, riskRepo domain.RiskRepository, userRepo domain.UserRepository, auditSvc *AuditService) *CountermeasureUsecase {
 	return &CountermeasureUsecase{
-		cmRepo:   cmRepo,
-		riskRepo: riskRepo,
-		userRepo: userRepo,
+		cmRepo:    cmRepo,
+		riskRepo:  riskRepo,
+		userRepo:  userRepo,
+		auditSvc:  auditSvc,
 	}
 }
 
@@ -118,6 +120,10 @@ func (u *CountermeasureUsecase) Create(ctx context.Context, cm *domain.Counterme
 		return nil, err
 	}
 
+	if u.auditSvc != nil {
+		_ = u.auditSvc.Log(ctx, "COUNTERMEASURE", cm.ID, cm.Description, domain.ActionCreate, userID, "", nil, cm)
+	}
+
 	return cm, nil
 }
 
@@ -171,6 +177,10 @@ func (u *CountermeasureUsecase) Update(ctx context.Context, cm *domain.Counterme
 		return nil, err
 	}
 
+	if u.auditSvc != nil {
+		_ = u.auditSvc.Log(ctx, "COUNTERMEASURE", cm.ID, cm.Description, domain.ActionUpdate, userID, DiffChanges(existing, cm), existing, cm)
+	}
+
 	return cm, nil
 }
 
@@ -196,6 +206,10 @@ func (u *CountermeasureUsecase) Delete(ctx context.Context, id, userID, role str
 		if risk.Status == domain.StatusCompleted {
 			return domain.ErrValidation
 		}
+	}
+
+	if u.auditSvc != nil {
+		_ = u.auditSvc.Log(ctx, "COUNTERMEASURE", id, existing.Description, domain.ActionDelete, userID, "", nil, nil)
 	}
 
 	return u.cmRepo.Delete(ctx, id)

@@ -38,7 +38,7 @@ export function StatCard({ title, value, icon: Icon, color, trend, loading }: St
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-between">
-          <div className="text-3xl font-bold text-gray-900 dark:text-white">
+          <div className="text-3xl font-bold text-gray-900 dark:text-white min-w-0 truncate">
             {value}
           </div>
           <div className={cn('p-2 rounded-full', color)}>

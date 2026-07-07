@@ -14,18 +14,13 @@ import {
   Menu,
   X,
   Shield,
+  ScrollText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Risks', href: '/risks', icon: FileText },
-  { name: 'Reports', href: '/reports', icon: BarChart3 },
-  { name: 'Admin', href: '/admin/users', icon: Settings, adminOnly: true },
-  { name: 'Objects', href: '/admin/objects', icon: Database, adminOnly: true },
-];
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
+import { useLanguage } from '@/lib/language-context';
 
 export default function DashboardLayout({
   children,
@@ -34,7 +29,17 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const navigation = [
+    { name: t.nav.dashboard, href: '/dashboard', icon: LayoutDashboard },
+    { name: t.nav.risks, href: '/risks', icon: FileText },
+    { name: t.nav.reports, href: '/reports', icon: BarChart3 },
+    { name: t.nav.admin, href: '/admin/users', icon: Settings, adminOnly: true },
+    { name: t.nav.objects, href: '/admin/objects', icon: Database, adminOnly: true },
+    { name: t.admin.logs, href: '/admin/logs', icon: ScrollText, adminOnly: true, divider: true },
+  ];
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -57,7 +62,7 @@ export default function DashboardLayout({
               const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
               return (
                 <Button
-                  key={item.name}
+                  key={item.href}
                   variant={isActive ? 'secondary' : 'ghost'}
                   className={cn(
                     'w-full justify-start gap-3 h-10 text-sm font-medium',
@@ -90,7 +95,7 @@ export default function DashboardLayout({
                 variant="ghost"
                 size="icon-sm"
                 onClick={logout}
-                aria-label="Log out"
+                aria-label={t.nav.logout}
                 className="text-muted-foreground hover:text-foreground"
               >
                 <LogOut className="h-5 w-5" />
@@ -115,13 +120,14 @@ export default function DashboardLayout({
             size="icon"
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="lg:hidden"
-            aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+            aria-label={sidebarOpen ? t.nav.closeSidebar : t.nav.openSidebar}
             aria-expanded={sidebarOpen}
           >
             {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </Button>
           <div className="flex-1" />
-          <div className="hidden sm:block text-sm text-muted-foreground">
+          <LanguageToggle />
+          <div className="hidden sm:block text-sm text-muted-foreground truncate max-w-[150px]">
             {user?.full_name}
           </div>
         </header>

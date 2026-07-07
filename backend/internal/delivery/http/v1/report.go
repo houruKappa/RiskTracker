@@ -84,6 +84,11 @@ func (h *ReportHandler) Detail(w http.ResponseWriter, r *http.Request) {
 		dateToFilter = &dt
 	}
 
+	var searchFilter *string
+	if s := query.Get("search"); s != "" {
+		searchFilter = &s
+	}
+
 	filter := domain.ReportFilter{
 		Page:      page,
 		Limit:     limit,
@@ -94,6 +99,7 @@ func (h *ReportHandler) Detail(w http.ResponseWriter, r *http.Request) {
 		DateTo:    dateToFilter,
 		UserID:    userID,
 		Role:      role,
+		Search:    searchFilter,
 	}
 
 	result, err := h.uc.GetDetailed(r.Context(), filter)

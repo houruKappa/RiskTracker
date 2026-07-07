@@ -37,26 +37,26 @@ func main() {
 	}
 	log.Println("migrations applied successfully")
 
+	auditLogRepo := postgres.NewAuditLogRepo(db)
+	auditSvc := usecase.NewAuditService(auditLogRepo)
+	auditLogUC := usecase.NewAuditLogUsecase(auditLogRepo)
+	auditLogHandler := v1.NewAuditLogHandler(auditLogUC)
+
 	userRepo := postgres.NewUserRepo(db)
 	authUC := usecase.NewAuthUsecase(userRepo, cfg.JWTSecret, 24*time.Hour)
 	authHandler := v1.NewAuthHandler(authUC)
-	userHandler := v1.NewUserHandler(userRepo)
+	userHandler := v1.NewUserHandler(userRepo, auditSvc)
 
 	riskObjectRepo := postgres.NewRiskObjectRepo(db)
-	riskObjectUC := usecase.NewRiskObjectUsecase(riskObjectRepo)
+	riskObjectUC := usecase.NewRiskObjectUsecase(riskObjectRepo, auditSvc)
 	riskObjectHandler := v1.NewRiskObjectHandler(riskObjectUC)
-
-	auditLogRepo := postgres.NewAuditLogRepo(db)
-	auditLogUC := usecase.NewAuditLogUsecase(auditLogRepo)
-	auditLogHandler := v1.NewAuditLogHandler(auditLogUC)
-	auditSvc := usecase.NewAuditService(auditLogRepo)
 
 	riskRepo := postgres.NewRiskRepo(db)
 	riskUC := usecase.NewRiskUsecase(riskRepo, auditSvc)
 	riskHandler := v1.NewRiskHandler(riskUC)
 
 	cmRepo := postgres.NewCountermeasureRepo(db)
-	cmUC := usecase.NewCountermeasureUsecase(cmRepo, riskRepo, userRepo)
+	cmUC := usecase.NewCountermeasureUsecase(cmRepo, riskRepo, userRepo, auditSvc)
 	cmHandler := v1.NewCountermeasureHandler(cmUC)
 
 	reportRepo := postgres.NewReportRepo(db)
@@ -75,6 +75,9 @@ func main() {
 	mux.Handle("POST /api/v1/auth/logout", middleware.AuthRequired(authUC)(http.HandlerFunc(authHandler.Logout)))
 	mux.Handle("GET /api/v1/users/me", middleware.AuthRequired(authUC)(http.HandlerFunc(authHandler.Me)))
 
+	// User routes (read-only for any authenticated user)
+	mux.Handle("GET /api/v1/users", middleware.AuthRequired(authUC)(http.HandlerFunc(userHandler.List)))
+
 	// Admin user management routes
 	mux.Handle("GET /api/v1/admin/users", middleware.AuthRequired(authUC)(middleware.AdminRequired(http.HandlerFunc(userHandler.List))))
 	mux.Handle("POST /api/v1/admin/users", middleware.AuthRequired(authUC)(middleware.AdminRequired(http.HandlerFunc(userHandler.Create))))
@@ -86,7 +89,7 @@ func main() {
 	mux.Handle("PUT /api/v1/admin/objects/{id}", middleware.AuthRequired(authUC)(middleware.AdminRequired(http.HandlerFunc(riskObjectHandler.Update))))
 	mux.Handle("DELETE /api/v1/admin/objects/{id}", middleware.AuthRequired(authUC)(middleware.AdminRequired(http.HandlerFunc(riskObjectHandler.Delete))))
 
-	mux.HandleFunc("POST /api/v1/risks", riskHandler.Create)
+	mux.Handle("POST /api/v1/risks", middleware.AuthRequired(authUC)(http.HandlerFunc(riskHandler.Create)))
 	mux.Handle("GET /api/v1/risks", middleware.AuthRequired(authUC)(http.HandlerFunc(riskHandler.List)))
 	mux.Handle("GET /api/v1/risks/{id}", middleware.AuthRequired(authUC)(http.HandlerFunc(riskHandler.GetByID)))
 	mux.Handle("PUT /api/v1/risks/{id}", middleware.AuthRequired(authUC)(http.HandlerFunc(riskHandler.Update)))

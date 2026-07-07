@@ -18,8 +18,11 @@ type AuditLog struct {
 	ID              int64           `json:"id" db:"id"`
 	EntityType      string          `json:"entity_type" db:"entity_type"`
 	EntityID        string          `json:"entity_id" db:"entity_id"`
+	EntityName      string          `json:"entity_name" db:"entity_name"`
 	ActionType      ActionType      `json:"action_type" db:"action_type"`
 	ChangedByUserID string          `json:"changed_by_user_id" db:"changed_by_user_id"`
+	ChangedByEmail  string          `json:"changed_by_email" db:"-"`
+	Changes         string          `json:"changes" db:"changes"`
 	Timestamp       time.Time       `json:"timestamp" db:"timestamp"`
 	OldState        json.RawMessage `json:"old_state,omitempty" db:"old_state"`
 	NewState        json.RawMessage `json:"new_state,omitempty" db:"new_state"`
@@ -31,16 +34,18 @@ type AuditLogRepository interface {
 }
 
 type AuditLogFilter struct {
-	Page             int
-	Limit            int
-	EntityType       *string
-	EntityID         *string
-	ActionType       *ActionType
-	ChangedByUserID  *string
-	DateFrom         *string
-	DateTo           *string
-	UserID           string
-	Role             string
+	Page            int
+	Limit           int
+	EntityType      *string
+	EntityID        *string
+	ActionType      *ActionType
+	ChangedByUserID *string
+	UserEmail       *string
+	Search          *string
+	DateFrom        *string
+	DateTo          *string
+	UserID          string
+	Role            string
 }
 
 type PaginatedAuditLogs struct {

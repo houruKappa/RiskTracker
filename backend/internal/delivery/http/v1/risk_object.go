@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/houruKappa/RiskTracker/internal/domain"
+	"github.com/houruKappa/RiskTracker/internal/delivery/http/middleware"
 	"github.com/houruKappa/RiskTracker/internal/usecase"
 )
 
@@ -15,6 +16,11 @@ type RiskObjectHandler struct {
 
 func NewRiskObjectHandler(uc *usecase.RiskObjectUsecase) *RiskObjectHandler {
 	return &RiskObjectHandler{uc: uc}
+}
+
+func (h *RiskObjectHandler) getUserID(r *http.Request) string {
+	id, _ := r.Context().Value(middleware.CtxUserID).(string)
+	return id
 }
 
 type createObjectRequest struct {
@@ -51,7 +57,7 @@ func (h *RiskObjectHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Description: req.Description,
 	}
 
-	if err := h.uc.Create(r.Context(), obj); err != nil {
+	if err := h.uc.Create(r.Context(), obj, h.getUserID(r)); err != nil {
 		if errors.Is(err, domain.ErrValidation) {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "name and valid object_type are required"})
 			return
@@ -87,7 +93,7 @@ func (h *RiskObjectHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Description: req.Description,
 	}
 
-	if err := h.uc.Update(r.Context(), obj); err != nil {
+	if err := h.uc.Update(r.Context(), obj, h.getUserID(r)); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "object not found"})
 			return
@@ -114,7 +120,7 @@ func (h *RiskObjectHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.uc.Delete(r.Context(), id); err != nil {
+	if err := h.uc.Delete(r.Context(), id, h.getUserID(r)); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "object not found"})
 			return
