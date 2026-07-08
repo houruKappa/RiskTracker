@@ -93,11 +93,11 @@ export default function DashboardPage() {
           loading={isLoading}
         />
         <StatCard
-          title="Expired Countermeasures"
+          title={t.report.expiredCountermeasures}
           value={summary?.expired_countermeasures || 0}
           icon={AlertTriangle}
           color="bg-red-500"
-          trend="Require immediate attention"
+          trend={`${summary?.overdue_countermeasures || 0} ${t.report.overdueCms.toLowerCase()}`}
           loading={isLoading}
         />
         <StatCard
@@ -105,7 +105,7 @@ export default function DashboardPage() {
           value={summary?.expiring_soon_countermeasures || 0}
           icon={TrendingUp}
           color="bg-orange-500"
-          trend="Plan actions now"
+          trend={`${summary?.expiring_soon_countermeasures || 0} ${t.report.expiringSoon.toLowerCase()}`}
           loading={isLoading}
         />
       </div>

@@ -72,6 +72,7 @@ func (u *RiskUsecase) Update(ctx context.Context, risk *domain.Risk, userID, rol
 	}
 
 	risk.OwnerID = existing.OwnerID
+	risk.CreatedAt = existing.CreatedAt
 
 	maxCause, maxConseq := u.computeMaxProbabilities(risk.Causes, risk.Consequences)
 	risk.MaxCauseProbability = maxCause

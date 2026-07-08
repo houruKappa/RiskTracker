@@ -3,7 +3,7 @@
 import { useLanguage } from '@/lib/language-context';
 import { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Search, FileText } from 'lucide-react';
 import { riskService, riskObjectService, userService } from '@/lib/api-services';
 import type { Risk, RiskObject, User } from '@/types/api';
 import {
@@ -24,6 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { CreateRiskDialog } from '@/components/risk/CreateRiskDialog';
 import { Autocomplete } from '@/components/ui/Autocomplete';
+import { RiskEditSheet } from '@/components/risk/RiskDrawer';
 
 const statusColors = {
   IN_PROGRESS: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
@@ -78,6 +79,7 @@ export default function RisksPage() {
   const [targetFilter, setTargetFilter] = useState('');
   const [ownerFilter, setOwnerFilter] = useState('');
   const [search, setSearch] = useState('');
+  const [selectedRisk, setSelectedRisk] = useState<string | null>(null);
 
   const { t } = useLanguage();
 
@@ -145,6 +147,7 @@ export default function RisksPage() {
 
   return (
     <div className="space-y-6">
+      <RiskEditSheet riskId={selectedRisk} onClose={() => setSelectedRisk(null)} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t.risk.title}</h1>
@@ -157,13 +160,13 @@ export default function RisksPage() {
         <CardContent className="pt-6">
           <div className="flex flex-wrap gap-4 items-end">
             <div className="flex-1 min-w-[200px]">
-              <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Поиск</Label>
+              <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.common.search}</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  placeholder="Поиск по названию, ID, владельцу..."
+                  placeholder={t.admin.searchPlaceholder}
                   className="pl-9"
                 />
               </div>
@@ -172,6 +175,8 @@ export default function RisksPage() {
               <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.risk.status}</Label>
               <Autocomplete
                 clearable
+                showAllOption
+                allLabel={t.report.allStatuses}
                 options={[
                   { value: 'IN_PROGRESS', label: t.risk.inProgress },
                   { value: 'COMPLETED', label: t.risk.completed },
@@ -186,6 +191,8 @@ export default function RisksPage() {
               <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.risk.riskObject}</Label>
               <Autocomplete
                 clearable
+                showAllOption
+                allLabel={t.report.allObjects}
                 options={objects.map(o => ({ value: o.id, label: o.name }))}
                 value={targetFilter}
                 onChange={handleFilterChange(setTargetFilter)}
@@ -197,6 +204,8 @@ export default function RisksPage() {
               <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.risk.riskOwner}</Label>
               <Autocomplete
                 clearable
+                showAllOption
+                allLabel={t.report.allOwners}
                 options={users.map(u => ({ value: u.id, label: u.full_name, subtitle: u.email }))}
                 value={ownerFilter}
                 onChange={handleFilterChange(setOwnerFilter)}
@@ -222,13 +231,14 @@ export default function RisksPage() {
                   <TableHead>{t.risk.status}</TableHead>
                   <TableHead>{t.risk.probability}</TableHead>
                   <TableHead>{t.risk.impact}</TableHead>
-                  <TableHead className="w-[100px]">{t.risk.created}</TableHead>
+                  <TableHead>{t.risk.created}</TableHead>
+                  <TableHead className="w-[60px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {risks.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-gray-500 dark:text-gray-400">
+                    <TableCell colSpan={9} className="text-center py-12 text-gray-500 dark:text-gray-400">
                       {t.common.noData}
                     </TableCell>
                   </TableRow>
@@ -272,13 +282,18 @@ export default function RisksPage() {
                       <TableCell className="text-sm text-gray-500 dark:text-gray-400">
                         {new Date(risk.created_at).toLocaleDateString()}
                       </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" onClick={() => setSelectedRisk(risk.id)} className="text-pink-600 hover:text-pink-700 hover:bg-pink-50" aria-label={t.risk.editRisk}>
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
               </TableBody>
-              <TableFooter>
-                <TableRow>
-                  <TableCell colSpan={8} className="py-4">
+                <TableFooter>
+                  <TableRow>
+                    <TableCell colSpan={9} className="py-4">
                     <div className="flex items-center justify-between">
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         {t.common.showingXtoYofZ

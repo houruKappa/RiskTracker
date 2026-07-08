@@ -22,6 +22,7 @@ export interface RiskObject {
 export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type RiskStatus = 'IN_PROGRESS' | 'COMPLETED';
 export type CountermeasureTarget = 'CAUSE' | 'CONSEQUENCE';
+export type CountermeasureStatus = 'PENDING' | 'COMPLETED';
 export type RiskObjectType = 'IT_SYSTEM' | 'PROJECT' | 'PROCESS';
 export type UserRole = 'USER' | 'ADMIN';
 
@@ -52,6 +53,7 @@ export interface Countermeasure {
   description: string;
   assignee_id: string;
   assignee?: User;
+  status: CountermeasureStatus;
   deadline: string;
   created_at: string;
 }
@@ -89,10 +91,33 @@ export interface CountermeasureReport {
   id: string;
   description: string;
   assignee_name: string;
+  assignee_id: string;
   deadline: string;
+  status: CountermeasureStatus;
   is_expired: boolean;
   is_expiring_soon: boolean;
   target_type: CountermeasureTarget;
+}
+
+export interface OverdueCountermeasure {
+  risk_id: string;
+  risk_title: string;
+  countermeasure_id: string;
+  description: string;
+  assignee_name: string;
+  assignee_id: string;
+  deadline: string;
+}
+
+export interface ReportStatistics {
+  risks_total: number;
+  risks_in_progress: number;
+  risks_completed: number;
+  countermeasures_total: number;
+  countermeasures_completed: number;
+  countermeasures_pending: number;
+  countermeasures_overdue: number;
+  overdue_details: OverdueCountermeasure[];
 }
 
 export interface ReportItem {
@@ -101,6 +126,7 @@ export interface ReportItem {
   target_name: string;
   target_type: RiskObjectType;
   owner_name: string;
+  owner_id: string;
   status: RiskStatus;
   probability: RiskLevel;
   impact: RiskLevel;
@@ -115,12 +141,19 @@ export interface PaginatedReport {
   total_count: number;
   page: number;
   limit: number;
+  statistics: ReportStatistics;
+  report_for_type: string;
+  report_for_name: string;
 }
 
 export interface ReportSummary {
   total_risks: number;
   in_progress_risks: number;
   completed_risks: number;
+  total_countermeasures: number;
+  completed_countermeasures: number;
+  pending_countermeasures: number;
+  overdue_countermeasures: number;
   expired_countermeasures: number;
   expiring_soon_countermeasures: number;
 }
@@ -169,12 +202,14 @@ export interface CreateCountermeasureRequest {
   consequence_id?: string;
   description: string;
   assignee_id: string;
+  status?: CountermeasureStatus;
   deadline: string;
 }
 
 export interface UpdateCountermeasureRequest {
   description: string;
   assignee_id: string;
+  status?: CountermeasureStatus;
   deadline: string;
 }
 
@@ -200,6 +235,8 @@ export interface ReportFilters {
   limit?: number;
   target_id?: string;
   owner_id?: string;
+  assignee_id?: string;
+  risk_ids?: string[];
   status?: RiskStatus;
   date_from?: string;
   date_to?: string;

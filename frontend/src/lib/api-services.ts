@@ -94,12 +94,14 @@ export const countermeasureService = {
     consequence_id?: string;
     description: string;
     assignee_id: string;
+    status?: string;
     deadline: string;
   }) => api.post<Countermeasure>('/api/v1/countermeasures', data),
   
   update: (id: string, data: {
     description: string;
     assignee_id: string;
+    status?: string;
     deadline: string;
   }) => api.put<Countermeasure>(`/api/v1/countermeasures/${id}`, data),
   
@@ -119,6 +121,8 @@ export const reportService = {
     limit?: number;
     target_id?: string;
     owner_id?: string;
+    assignee_id?: string;
+    risk_ids?: string;
     status?: string;
     date_from?: string;
     date_to?: string;

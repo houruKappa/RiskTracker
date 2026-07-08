@@ -20,18 +20,21 @@ func NewCountermeasureHandler(cmUC *usecase.CountermeasureUsecase) *Countermeasu
 }
 
 type createCountermeasureRequest struct {
-	RiskID          string                  `json:"risk_id"`
-	TargetType      domain.CountermeasureTarget `json:"target_type"`
-	CauseID         *string                 `json:"cause_id,omitempty"`
-	ConsequenceID   *string                 `json:"consequence_id,omitempty"`
-	Description     string                  `json:"description"`
-	AssigneeID      string                  `json:"assignee_id"`
-	Deadline        time.Time               `json:"deadline"`
+	RiskID          string                       `json:"risk_id"`
+	TargetType      domain.CountermeasureTarget  `json:"target_type"`
+	CauseID         *string                      `json:"cause_id,omitempty"`
+	ConsequenceID   *string                      `json:"consequence_id,omitempty"`
+	Description     string                       `json:"description"`
+	AssigneeID      string                       `json:"assignee_id"`
+	Status          domain.CountermeasureStatus  `json:"status,omitempty"`
+	Deadline        time.Time                    `json:"deadline"`
 }
 
 type updateCountermeasureRequest struct {
-	Description string `json:""`
-	ID string `json:"-"`
+	Description string                       `json:"description"`
+	AssigneeID  string                       `json:"assignee_id"`
+	Status      domain.CountermeasureStatus  `json:"status,omitempty"`
+	Deadline    time.Time                    `json:"deadline"`
 }
 
 func (h *CountermeasureHandler) getUserID(r *http.Request) string {
@@ -58,6 +61,7 @@ func (h *CountermeasureHandler) Create(w http.ResponseWriter, r *http.Request) {
 		ConsequenceID: req.ConsequenceID,
 		Description:   req.Description,
 		AssigneeID:    req.AssigneeID,
+		Status:        req.Status,
 		Deadline:      req.Deadline,
 	}
 
@@ -109,9 +113,10 @@ func (h *CountermeasureHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Description string    `json:"description"`
-		AssigneeID  string    `json:"assignee_id"`
-		Deadline    time.Time `json:"deadline"`
+		Description string                       `json:"description"`
+		AssigneeID  string                       `json:"assignee_id"`
+		Status      domain.CountermeasureStatus  `json:"status,omitempty"`
+		Deadline    time.Time                    `json:"deadline"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
@@ -140,6 +145,7 @@ func (h *CountermeasureHandler) Update(w http.ResponseWriter, r *http.Request) {
 		ConsequenceID: existing.ConsequenceID,
 		Description:   req.Description,
 		AssigneeID:    req.AssigneeID,
+		Status:        req.Status,
 		Deadline:      req.Deadline,
 		CreatedAt:     existing.CreatedAt,
 	}

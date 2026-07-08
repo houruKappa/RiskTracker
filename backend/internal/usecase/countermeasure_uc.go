@@ -159,8 +159,15 @@ func (u *CountermeasureUsecase) Update(ctx context.Context, cm *domain.Counterme
 	cm.ConsequenceID = existing.ConsequenceID
 	cm.CreatedAt = existing.CreatedAt
 
+	// A completed countermeasure is allowed to have a past deadline.
+	if cm.Status != domain.CMStatusCompleted {
+		if cm.Deadline.IsZero() || cm.Deadline.Before(time.Now()) {
+			return nil, domain.ErrValidation
+		}
+	}
+
 	// Validate
-	if cm.Description == "" || cm.AssigneeID == "" || cm.Deadline.IsZero() || cm.Deadline.Before(time.Now()) {
+	if cm.Description == "" || cm.AssigneeID == "" {
 		return nil, domain.ErrValidation
 	}
 

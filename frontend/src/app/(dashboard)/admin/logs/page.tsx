@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, Fragment } from 'react';
+import { useState, Fragment, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, AlertTriangle, X } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, AlertTriangle, X, Copy } from 'lucide-react';
 import { reportService, userService } from '@/lib/api-services';
 import type { User } from '@/types/api';
 import {
@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { useLanguage } from '@/lib/language-context';
 import { Autocomplete } from '@/components/ui/Autocomplete';
+import { toast } from 'sonner';
 
 const actionColors = {
   CREATE: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
@@ -42,6 +43,42 @@ const entityColors = {
   USER: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400',
 } as const;
 
+function diffJson(oldObj: Record<string, unknown> | undefined, newObj: Record<string, unknown> | undefined): Record<string, { old: unknown; new: unknown }> {
+  if (!oldObj && !newObj) return {};
+  const result: Record<string, { old: unknown; new: unknown }> = {};
+  const a = oldObj || {};
+  const b = newObj || {};
+  const allKeys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const key of allKeys) {
+    const av = a[key];
+    const bv = b[key];
+    if (JSON.stringify(av) !== JSON.stringify(bv)) {
+      result[key] = { old: av, new: bv };
+    }
+  }
+  return result;
+}
+
+function DiffView({ oldState, newState }: { oldState: any; newState: any }) {
+  const changes = useMemo(() => diffJson(oldState, newState), [oldState, newState]);
+  const entries = Object.entries(changes);
+  if (entries.length === 0) {
+    return <p className="text-sm text-gray-400">—</p>;
+  }
+  return (
+    <div className="space-y-1 max-w-full overflow-hidden">
+      {entries.map(([key, { old: ov, new: nv }]) => (
+        <div key={key} className="flex flex-wrap gap-2 text-sm font-mono min-w-0">
+          <span className="text-gray-500 font-semibold shrink-0">{key}:</span>
+          <span className="text-red-500 line-through break-all min-w-0">{ov === null || ov === undefined ? '—' : String(typeof ov === 'object' ? JSON.stringify(ov) : ov)}</span>
+          <span className="text-gray-400 shrink-0">→</span>
+          <span className="text-green-600 break-all min-w-0">{nv === null || nv === undefined ? '—' : String(typeof nv === 'object' ? JSON.stringify(nv) : nv)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function AuditLogTableSkeleton() {
   return (
     <Table>
@@ -52,7 +89,7 @@ function AuditLogTableSkeleton() {
           <TableHead><Skeleton className="h-4 w-24" /></TableHead>
           <TableHead><Skeleton className="h-4 w-40" /></TableHead>
           <TableHead><Skeleton className="h-4 w-48" /></TableHead>
-          <TableHead className="w-[60px]"><Skeleton className="h-4 w-10" /></TableHead>
+          <TableHead className="w-[80px]"><Skeleton className="h-4 w-10" /></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -114,13 +151,18 @@ export default function AdminLogsPage() {
     });
   };
 
+  const copyLog = (log: any) => {
+    navigator.clipboard.writeText(JSON.stringify(log, null, 2));
+    toast.success('Copied to clipboard');
+  };
+
   const entityTypeOptions = [
     { value: '', label: t.admin.allTypes },
     { value: 'RISK', label: t.admin.risk },
     { value: 'RISK_CAUSE', label: `${t.admin.risk} (cause)` },
     { value: 'RISK_CONSEQUENCE', label: `${t.admin.risk} (consequence)` },
     { value: 'COUNTERMEASURE', label: t.admin.countermeasure },
-    { value: 'RISK_OBJECT', label: t.admin.objects },
+                  { value: 'RISK_OBJECT', label: t.nav.objects },
     { value: 'USER', label: 'User' },
   ];
 
@@ -189,7 +231,6 @@ export default function AdminLogsPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {/* Search by risk name/ID */}
             <div className="xl:col-span-2">
               <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.common.search}</Label>
               <div className="relative">
@@ -202,8 +243,6 @@ export default function AdminLogsPage() {
                 />
               </div>
             </div>
-
-            {/* User email */}
             <div>
               <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.admin.userEmail}</Label>
               <div className="relative">
@@ -213,107 +252,52 @@ export default function AdminLogsPage() {
                   placeholder="email"
                 />
                 {userEmailFilter && (
-                  <X
-                    className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
-                    onClick={() => { setUserEmailFilter(''); setPage(1); }}
-                  />
+                  <X className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer" onClick={() => { setUserEmailFilter(''); setPage(1); }} />
                 )}
               </div>
             </div>
-
-            {/* User select */}
             <div>
               <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.admin.user}</Label>
-              <Autocomplete
-                options={userOptions}
-                value={userFilter}
-                onChange={(v) => { setUserFilter(v); setPage(1); }}
-                placeholder={t.admin.allUsers}
-                clearable
-              />
+              <Autocomplete options={userOptions} value={userFilter} onChange={(v) => { setUserFilter(v); setPage(1); }} placeholder={t.admin.allUsers} clearable />
             </div>
-
-            {/* Entity type */}
             <div>
               <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.admin.entityType}</Label>
-              <Autocomplete
-                options={entityTypeOptions}
-                value={entityTypeFilter}
-                onChange={(v) => { setEntityTypeFilter(v); setPage(1); }}
-                placeholder={t.admin.allTypes}
-                clearable
-              />
+              <Autocomplete options={entityTypeOptions} value={entityTypeFilter} onChange={(v) => { setEntityTypeFilter(v); setPage(1); }} placeholder={t.admin.allTypes} clearable />
             </div>
-
-            {/* Action type */}
             <div>
               <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.admin.action}</Label>
-              <Autocomplete
-                options={actionOptions}
-                value={actionFilter}
-                onChange={(v) => { setActionFilter(v); setPage(1); }}
-                placeholder={t.admin.allActions}
-                clearable
-              />
+              <Autocomplete options={actionOptions} value={actionFilter} onChange={(v) => { setActionFilter(v); setPage(1); }} placeholder={t.admin.allActions} clearable />
             </div>
-
-            {/* Date from */}
             <div>
               <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.report.dateFrom}</Label>
               <div className="relative">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn('w-full justify-between font-normal', !dateFrom && 'text-muted-foreground')}
-                    >
+                    <Button variant="outline" className={cn('w-full justify-between font-normal', !dateFrom && 'text-muted-foreground')}>
                       {dateFrom || 'YYYY-MM-DD'}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
-                      mode="single"
-                      selected={dateFrom ? parseISO(dateFrom) : undefined}
-                      onSelect={(date) => { if (date) { setDateFrom(format(date, 'yyyy-MM-dd')); setPage(1); } }}
-                    />
+                    <CalendarComponent mode="single" selected={dateFrom ? parseISO(dateFrom) : undefined} onSelect={(date) => { if (date) { setDateFrom(format(date, 'yyyy-MM-dd')); setPage(1); } }} />
                   </PopoverContent>
                 </Popover>
-                {dateFrom && (
-                  <X
-                    className="absolute right-8 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
-                    onClick={() => { setDateFrom(''); setPage(1); }}
-                  />
-                )}
+                {dateFrom && <X className="absolute right-8 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer" onClick={() => { setDateFrom(''); setPage(1); }} />}
               </div>
             </div>
-
-            {/* Date to */}
             <div>
               <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.report.dateTo}</Label>
               <div className="relative">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn('w-full justify-between font-normal', !dateTo && 'text-muted-foreground')}
-                    >
+                    <Button variant="outline" className={cn('w-full justify-between font-normal', !dateTo && 'text-muted-foreground')}>
                       {dateTo || 'YYYY-MM-DD'}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
-                      mode="single"
-                      selected={dateTo ? parseISO(dateTo) : undefined}
-                      onSelect={(date) => { if (date) { setDateTo(format(date, 'yyyy-MM-dd')); setPage(1); } }}
-                    />
+                    <CalendarComponent mode="single" selected={dateTo ? parseISO(dateTo) : undefined} onSelect={(date) => { if (date) { setDateTo(format(date, 'yyyy-MM-dd')); setPage(1); } }} />
                   </PopoverContent>
                 </Popover>
-                {dateTo && (
-                  <X
-                    className="absolute right-8 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
-                    onClick={() => { setDateTo(''); setPage(1); }}
-                  />
-                )}
+                {dateTo && <X className="absolute right-8 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer" onClick={() => { setDateTo(''); setPage(1); }} />}
               </div>
             </div>
           </div>
@@ -331,8 +315,8 @@ export default function AdminLogsPage() {
                   <TableHead>{t.admin.user}</TableHead>
                   <TableHead>{t.admin.action}</TableHead>
                   <TableHead>{t.admin.target}</TableHead>
-                  <TableHead>{t.admin.changes}</TableHead>
-                  <TableHead className="w-[60px]"></TableHead>
+                  <TableHead className="max-w-[350px]">{t.admin.changes}</TableHead>
+                  <TableHead className="w-[80px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -367,33 +351,55 @@ export default function AdminLogsPage() {
                           </div>
                           <div className="text-xs text-gray-400 font-mono truncate">{log.entity_id}</div>
                         </TableCell>
-                        <TableCell className="max-w-[400px]">
-                          <span className="text-sm text-gray-700 dark:text-gray-300 break-words">
+                        <TableCell className="max-w-[350px]">
+                          <span className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-all block">
                             {log.changes ? log.changes : '—'}
                           </span>
                         </TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700" onClick={(e) => { e.stopPropagation(); toggleRow(index); }}>
-                            {expandedRows.has(index) ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                          </Button>
+                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 h-7 w-7" onClick={() => copyLog(log)}>
+                              <Copy className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 h-7 w-7" onClick={() => toggleRow(index)}>
+                              {expandedRows.has(index) ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                       {expandedRows.has(index) && (
                         <TableRow>
                           <TableCell colSpan={6} className="py-0">
-                            <div className="px-6 pb-4 bg-muted/50 border-t border-border">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="px-6 pb-4 bg-muted/50 border-t border-border space-y-4 max-w-full overflow-hidden">
+                              {/* Diff view */}
+                              {(log.old_state || log.new_state) && (
                                 <div>
-                                  <h4 className="font-medium text-sm text-gray-500 dark:text-gray-400 mb-2">{t.admin.oldState}</h4>
-                                  <pre className="text-xs bg-background p-3 rounded border border-border max-h-64 overflow-auto whitespace-pre-wrap font-mono">
-                                    {log.old_state ? JSON.stringify(log.old_state, null, 2) : '—'}
-                                  </pre>
+                                  <h4 className="font-medium text-sm text-gray-500 dark:text-gray-400 mb-2">Разница (diff)</h4>
+                                  <DiffView oldState={log.old_state} newState={log.new_state} />
                                 </div>
-                                <div>
-                                  <h4 className="font-medium text-sm text-gray-500 dark:text-gray-400 mb-2">{t.admin.newState}</h4>
-                                  <pre className="text-xs bg-background p-3 rounded border border-border max-h-64 overflow-auto whitespace-pre-wrap font-mono">
-                                    {log.new_state ? JSON.stringify(log.new_state, null, 2) : '—'}
-                                  </pre>
+                              )}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
+                                <div className="min-w-0">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="font-medium text-sm text-gray-500 dark:text-gray-400">{t.admin.oldState}</h4>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-gray-600" onClick={() => { navigator.clipboard.writeText(JSON.stringify(log.old_state, null, 2)); toast.success(t.common.copiedToClipboard); }}>
+                                      <Copy className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                   <pre className="text-xs bg-background p-3 rounded border border-border whitespace-pre-wrap break-all font-mono block max-w-full">
+                                     {log.old_state ? JSON.stringify(log.old_state, null, 2) : '—'}
+                                   </pre>
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="font-medium text-sm text-gray-500 dark:text-gray-400">{t.admin.newState}</h4>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-gray-600" onClick={() => { navigator.clipboard.writeText(JSON.stringify(log.new_state, null, 2)); toast.success(t.common.copiedToClipboard); }}>
+                                      <Copy className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                   <pre className="text-xs bg-background p-3 rounded border border-border whitespace-pre-wrap break-all font-mono block max-w-full">
+                                     {log.new_state ? JSON.stringify(log.new_state, null, 2) : '—'}
+                                   </pre>
                                 </div>
                               </div>
                             </div>

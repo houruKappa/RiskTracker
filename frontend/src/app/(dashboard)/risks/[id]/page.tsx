@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useQuery as useReactQuery } from '@tanstack/react-query';
+import { RiskEditSheet } from '@/components/risk/RiskDrawer';
 
 const statusColors = {
   IN_PROGRESS: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
@@ -55,6 +56,7 @@ export default function RiskDetailPage() {
   const riskId = params.id as string;
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
+  const [selectedRisk, setSelectedRisk] = useState<string | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['risk', riskId],
@@ -124,6 +126,7 @@ export default function RiskDetailPage() {
 
   return (
     <div className="space-y-6">
+      <RiskEditSheet riskId={selectedRisk} onClose={() => setSelectedRisk(null)} />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -142,6 +145,10 @@ export default function RiskDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setSelectedRisk(riskId)}>
+            <FileText className="h-4 w-4 mr-1" />
+            {t.common.edit}
+          </Button>
           <Badge variant="secondary" className={cn('capitalize', statusColors[risk.status as keyof typeof statusColors] || '')}>
             {risk.status === 'IN_PROGRESS' ? t.risk.inProgress : t.risk.completed}
           </Badge>
@@ -444,7 +451,7 @@ function CountermeasuresList({ items, isRiskCompleted, riskId, getUserName, dele
 }) {
   const { t } = useLanguage();
   const [editingCm, setEditingCm] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ description: '', assignee_id: '', deadline: '' });
+  const [editForm, setEditForm] = useState({ description: '', assignee_id: '', deadline: '', status: 'PENDING' });
   const queryClient = useQueryClient();
 
   const { data: usersData } = useQuery({
@@ -457,7 +464,7 @@ function CountermeasuresList({ items, isRiskCompleted, riskId, getUserName, dele
   const soonThreshold = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { description: string; assignee_id: string; deadline: string } }) =>
+    mutationFn: ({ id, data }: { id: string; data: { description: string; assignee_id: string; status?: string; deadline: string } }) =>
       countermeasureService.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['countermeasures', riskId] });
@@ -475,6 +482,7 @@ function CountermeasuresList({ items, isRiskCompleted, riskId, getUserName, dele
       description: cm.description,
       assignee_id: cm.assignee_id,
       deadline: cm.deadline ? cm.deadline.split('T')[0] : '',
+      status: cm.status || 'PENDING',
     });
   };
 
@@ -488,7 +496,8 @@ function CountermeasuresList({ items, isRiskCompleted, riskId, getUserName, dele
       data: {
         description: editForm.description,
         assignee_id: editForm.assignee_id,
-        deadline: editForm.deadline,
+        deadline: editForm.deadline.includes('T') ? editForm.deadline : editForm.deadline + 'T00:00:00Z',
+        status: editForm.status,
       },
     });
   };
@@ -507,16 +516,16 @@ function CountermeasuresList({ items, isRiskCompleted, riskId, getUserName, dele
         if (editingCm === cm.id) {
           return (
             <div key={cm.id} className="p-4 border border-pink-200 rounded-lg bg-pink-50/50 space-y-3">
-              <div>
-                <Label className="text-xs text-gray-600">{t.risk.countermeasureDescription}</Label>
-                <Textarea
-                  value={editForm.description}
-                  onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
-                  rows={2}
-                  className="bg-white/60 border-pink-200 text-gray-900 text-sm"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-3">
+                  <Label className="text-xs text-gray-600">{t.risk.countermeasureDescription}</Label>
+                  <Textarea
+                    value={editForm.description}
+                    onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
+                    rows={2}
+                    className="bg-white/60 border-pink-200 text-gray-900 text-sm"
+                  />
+                </div>
                 <div>
                   <Label className="text-xs text-gray-600">{t.risk.countermeasureAssignee}</Label>
                   <Select value={editForm.assignee_id} onValueChange={v => setEditForm(f => ({ ...f, assignee_id: v }))}>
@@ -539,6 +548,18 @@ function CountermeasuresList({ items, isRiskCompleted, riskId, getUserName, dele
                     className="h-8 text-xs bg-white/60 border-pink-200"
                   />
                 </div>
+                <div>
+                  <Label className="text-xs text-gray-600">{t.risk.status}</Label>
+                  <Select value={editForm.status} onValueChange={v => setEditForm(f => ({ ...f, status: v }))}>
+                    <SelectTrigger className="h-8 text-xs bg-white/60 border-pink-200">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PENDING">{t.risk.inProgress}</SelectItem>
+                      <SelectItem value="COMPLETED">{t.risk.completed}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="flex gap-2 justify-end">
                 <Button variant="ghost" size="sm" onClick={() => setEditingCm(null)} className="text-gray-600 text-xs">{t.common.cancel}</Button>
@@ -553,10 +574,11 @@ function CountermeasuresList({ items, isRiskCompleted, riskId, getUserName, dele
         return (
           <div key={cm.id} className="p-4 border border-border rounded-lg">
             <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-900 dark:text-white">{cm.description}</p>
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <p className="font-medium text-gray-900 dark:text-white break-all">{cm.description}</p>
                 <div className="flex items-center gap-3 mt-2 text-sm text-gray-500 dark:text-gray-400">
                   <span>{t.risk.assignee}: {getUserName(cm.assignee_id)}</span>
+                  <Badge variant="secondary" className={cn('text-xs', cm.status === 'COMPLETED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400')}>{cm.status === 'COMPLETED' ? t.risk.completed : t.risk.inProgress}</Badge>
                   <Badge className={badgeColor}>
                     {isExpired ? t.risk.expired : isExpiringSoon ? t.risk.expiringSoon : t.risk.active}
                   </Badge>

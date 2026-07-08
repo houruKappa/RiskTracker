@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Autocomplete } from '@/components/ui/Autocomplete';
 import { countermeasureService, userService } from '@/lib/api-services';
 import type { User } from '@/types/api';
@@ -25,6 +26,7 @@ export function CountermeasureFormDialog({ riskId, targetType, targetId, onSucce
   const [deadline, setDeadline] = useState('');
   const [description, setDescription] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
+  const [status, setStatus] = useState('PENDING');
   const queryClient = useQueryClient();
   const { t } = useLanguage();
 
@@ -41,6 +43,7 @@ export function CountermeasureFormDialog({ riskId, targetType, targetId, onSucce
       consequence_id?: string;
       description: string;
       assignee_id: string;
+      status?: string;
       deadline: string;
     }) => countermeasureService.create(data),
     onSuccess: () => {
@@ -50,6 +53,7 @@ export function CountermeasureFormDialog({ riskId, targetType, targetId, onSucce
       setDescription('');
       setAssigneeId('');
       setDeadline('');
+      setStatus('PENDING');
       setIsOpen(false);
       onSuccess?.();
     },
@@ -78,6 +82,7 @@ export function CountermeasureFormDialog({ riskId, targetType, targetId, onSucce
       consequence_id: targetType === 'CONSEQUENCE' ? targetId : undefined,
       description: description.trim(),
       assignee_id: assigneeId,
+      status: status || undefined,
       deadline: deadline + 'T23:59:59Z',
     });
   };
@@ -103,7 +108,7 @@ export function CountermeasureFormDialog({ riskId, targetType, targetId, onSucce
       </Button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50" onClick={() => { setIsOpen(false); setDescription(''); setAssigneeId(''); setDeadline(''); }}>
+        <div className="fixed inset-0 z-50" onClick={() => { setIsOpen(false); setDescription(''); setAssigneeId(''); setDeadline(''); setStatus('PENDING'); }}>
           <div className="absolute bottom-6 right-6 w-[480px] max-h-[calc(100vh-3rem)]" onClick={e => e.stopPropagation()}>
             <div className="bg-pink-50/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-pink-200/60 overflow-hidden flex flex-col max-h-[calc(100vh-3rem)]">
               <div className="flex items-center justify-between px-5 py-4 border-b border-pink-200/50 bg-gradient-to-r from-pink-200/40 to-transparent">
@@ -120,7 +125,7 @@ export function CountermeasureFormDialog({ riskId, targetType, targetId, onSucce
                 </div>
                 <button
                   type="button"
-                  onClick={() => { setIsOpen(false); setDescription(''); setAssigneeId(''); setDeadline(''); }}
+                  onClick={() => { setIsOpen(false); setDescription(''); setAssigneeId(''); setDeadline(''); setStatus('PENDING'); }}
                   className="h-7 w-7 rounded-lg hover:bg-pink-300/30 flex items-center justify-center transition-colors"
                 >
                   <X className="h-4 w-4 text-gray-500" />
@@ -160,6 +165,19 @@ export function CountermeasureFormDialog({ riskId, targetType, targetId, onSucce
                         onChange={(e) => setDeadline(e.target.value)}
                         className="bg-white/70 border-pink-200 text-gray-900 text-sm focus:border-pink-400"
                       />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <Label className="text-gray-700 text-xs font-medium">Статус</Label>
+                      <Select value={status} onValueChange={setStatus}>
+                        <SelectTrigger className="bg-white/70 border-pink-200 text-gray-900 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="PENDING">В работе (PENDING)</SelectItem>
+                          <SelectItem value="COMPLETED">Выполнена (COMPLETED)</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 

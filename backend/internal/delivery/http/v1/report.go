@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/houruKappa/RiskTracker/internal/domain"
 	"github.com/houruKappa/RiskTracker/internal/delivery/http/middleware"
@@ -89,17 +90,34 @@ func (h *ReportHandler) Detail(w http.ResponseWriter, r *http.Request) {
 		searchFilter = &s
 	}
 
+	var assigneeFilter *string
+	if a := query.Get("assignee_id"); a != "" {
+		assigneeFilter = &a
+	}
+
+	var riskIDs []string
+	if rids := query.Get("risk_ids"); rids != "" {
+		for _, p := range strings.Split(rids, ",") {
+			p = strings.TrimSpace(p)
+			if p != "" {
+				riskIDs = append(riskIDs, p)
+			}
+		}
+	}
+
 	filter := domain.ReportFilter{
-		Page:      page,
-		Limit:     limit,
-		TargetID:  targetFilter,
-		OwnerID:   ownerFilter,
-		Status:    statusFilter,
-		DateFrom:  dateFromFilter,
-		DateTo:    dateToFilter,
-		UserID:    userID,
-		Role:      role,
-		Search:    searchFilter,
+		Page:       page,
+		Limit:      limit,
+		TargetID:   targetFilter,
+		OwnerID:    ownerFilter,
+		Status:     statusFilter,
+		AssigneeID: assigneeFilter,
+		RiskIDs:    riskIDs,
+		DateFrom:   dateFromFilter,
+		DateTo:     dateToFilter,
+		UserID:     userID,
+		Role:       role,
+		Search:     searchFilter,
 	}
 
 	result, err := h.uc.GetDetailed(r.Context(), filter)

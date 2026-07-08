@@ -12,6 +12,18 @@ const (
 	TargetConsequence  CountermeasureTarget = "CONSEQUENCE"
 )
 
+type CountermeasureStatus string
+
+const (
+	CMStatusPending   CountermeasureStatus = "PENDING"
+	CMStatusCompleted CountermeasureStatus = "COMPLETED"
+)
+
+// IsOverdue returns true when the countermeasure is not completed and its deadline has passed.
+func (c *Countermeasure) IsOverdue() bool {
+	return c.Status != CMStatusCompleted && c.Deadline.Before(time.Now())
+}
+
 type Countermeasure struct {
 	ID            string                `json:"id" db:"id"`
 	RiskID        string                `json:"risk_id" db:"risk_id"`
@@ -20,6 +32,7 @@ type Countermeasure struct {
 	ConsequenceID *string              `json:"consequence_id,omitempty" db:"consequence_id"`
 	Description   string                `json:"description" db:"description"`
 	AssigneeID    string                `json:"assignee_id" db:"assignee_id"`
+	Status        CountermeasureStatus  `json:"status" db:"status"`
 	Deadline      time.Time             `json:"deadline" db:"deadline"`
 	CreatedAt     time.Time             `json:"created_at" db:"created_at"`
 }

@@ -370,9 +370,6 @@ export default function LoginPage() {
             <div className="text-center mb-2" style={{ animation: 'loginFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both' }}>
               <h1 className="text-[1.7rem] font-bold tracking-tight" style={{ color: '#1e1b2e' }}>{t.auth.signIn}</h1>
             </div>
-            <p className="text-center text-sm mb-9" style={{ color: '#6b7280', animation: 'loginFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both' }}>
-              {t.auth.demoAccounts}
-            </p>
 
             {/* Language Toggle */}
             <div className="absolute top-4 right-4">
@@ -444,23 +441,8 @@ export default function LoginPage() {
                 )}
               </div>
 
-              {/* Remember + Forgot */}
-              <div className="flex items-center justify-between mb-7" style={{ animation: 'loginFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.55s both' }}>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" defaultChecked className="sr-only peer" />
-                  <div className="w-[18px] h-[18px] rounded-[5px] border-[1.5px] flex items-center justify-center transition-all duration-250 bg-white/50 peer-checked:bg-gradient-to-br peer-checked:from-[#ec4899] peer-checked:to-[#f472b6] peer-checked:border-[#ec4899] peer-checked:shadow-[0_2px_8px_rgba(236,72,153,0.3)]" style={{ borderColor: 'rgba(236,72,153,0.25)' }}>
-                    <svg className="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 scale-50 peer-checked:scale-100 transition-all duration-250" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                  </div>
-                  <span className="text-[0.85rem] select-none" style={{ color: '#6b7280' }}>
-                    {t.auth.showPassword === 'Show password' ? 'Remember me' : 'Запомнить меня'}
-                  </span>
-                </label>
-                <a href="#" className="text-[0.85rem] font-semibold transition-colors duration-200 hover:text-[#db2777]" style={{ color: '#ec4899', textDecoration: 'none' }}>
-                  {t.auth.forgotPassword}
-                </a>
-              </div>
-
               {/* Submit */}
+              <div className="mb-3">
               <button
                 type="submit"
                 disabled={isLoading}
@@ -476,20 +458,8 @@ export default function LoginPage() {
                   <span className="relative z-10">{t.auth.signIn}</span>
                 )}
               </button>
-            </form>
-
-            {/* Demo accounts */}
-            <div className="mt-7 p-3.5 rounded-xl" style={{ background: 'rgba(236,72,153,0.04)', border: '1px solid rgba(236,72,153,0.08)', animation: 'loginFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.7s both' }}>
-              <p className="text-xs font-medium mb-2" style={{ color: '#9ca3af' }}>{t.auth.demoAccounts}</p>
-              <div className="space-y-1.5">
-                <code className="block text-xs px-2.5 py-1.5 rounded-lg" style={{ color: '#ec4899', background: 'rgba(236,72,153,0.06)' }}>
-                  admin@risktracker.com / admin123
-                </code>
-                <code className="block text-xs px-2.5 py-1.5 rounded-lg" style={{ color: '#8b5cf6', background: 'rgba(139,92,246,0.06)' }}>
-                  user@test.com / user123
-                </code>
               </div>
-            </div>
+            </form>
 
           </div>
         </div>

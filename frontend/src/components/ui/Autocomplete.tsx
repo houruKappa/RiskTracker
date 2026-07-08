@@ -21,9 +21,11 @@ interface AutocompleteProps {
   className?: string;
   disabled?: boolean;
   clearable?: boolean;
+  showAllOption?: boolean;
+  allLabel?: string;
 }
 
-export function Autocomplete({ options, value, onChange, placeholder = 'Search...', emptyMessage = 'No results', className, disabled, clearable }: AutocompleteProps) {
+export function Autocomplete({ options, value, onChange, placeholder = 'Search...', emptyMessage = 'No results', className, disabled, clearable, showAllOption, allLabel = 'All' }: AutocompleteProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -42,70 +44,95 @@ export function Autocomplete({ options, value, onChange, placeholder = 'Search..
     }
   }, [open]);
 
+  const handleClear = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onChange('');
+    setSearch('');
+    setOpen(false);
+  };
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          disabled={disabled}
-          className={cn('w-full justify-between font-normal', !value && 'text-muted-foreground', className)}
-        >
-          {selected ? <span className="truncate">{selected.label}</span> : placeholder}
-          <span className="ml-2 flex items-center gap-1 shrink-0">
-            {clearable && value && (
-              <X
-                className="h-3.5 w-3.5 opacity-50 hover:opacity-100 cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onChange('');
-                  setSearch('');
-                }}
-              />
-            )}
-            <ChevronsUpDown className="h-4 w-4 opacity-50" />
-          </span>
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-        <div className="flex items-center border-b px-3">
-          <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-          <input
-            ref={inputRef}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={placeholder}
-            className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-          />
-        </div>
-        <div className="max-h-60 overflow-auto">
-          {filtered.length === 0 ? (
-            <div className="py-6 text-center text-sm text-muted-foreground">{emptyMessage}</div>
-          ) : (
-            filtered.map((option) => (
+    <div className="relative">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            disabled={disabled}
+            className={cn('w-full justify-between font-normal', !value && 'text-muted-foreground', className)}
+          >
+            {selected ? <span className="truncate">{selected.label}</span> : placeholder}
+            <span className="ml-2 flex items-center gap-1 shrink-0">
+              <ChevronsUpDown className="h-4 w-4 opacity-50" />
+            </span>
+          </Button>
+        </PopoverTrigger>
+        {clearable && value && (
+          <button
+            type="button"
+            onPointerDown={handleClear}
+            className="absolute right-8 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted z-10"
+          >
+            <X className="h-3.5 w-3.5 opacity-50 hover:opacity-100" />
+          </button>
+        )}
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <div className="flex items-center border-b px-3">
+            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            <input
+              ref={inputRef}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={placeholder}
+              className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
+          <div className="max-h-60 overflow-auto">
+            {showAllOption && (
               <div
-                key={option.value}
                 onClick={() => {
-                  onChange(option.value);
+                  onChange('');
                   setOpen(false);
                   setSearch('');
                 }}
                 className={cn(
                   'flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground',
-                  option.value === value && 'bg-accent'
+                  !value && 'bg-accent'
                 )}
               >
-                <Check className={cn('h-4 w-4', option.value === value ? 'opacity-100' : 'opacity-0')} />
-                <div className="flex flex-col min-w-0">
-                  <span className="truncate">{option.label}</span>
-                  {option.subtitle && <span className="text-xs text-muted-foreground truncate">{option.subtitle}</span>}
-                </div>
+                <Check className={cn('h-4 w-4', !value ? 'opacity-100' : 'opacity-0')} />
+                <span>{allLabel}</span>
               </div>
-            ))
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
+            )}
+            {filtered.length === 0 ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">{emptyMessage}</div>
+            ) : (
+              filtered.map((option) => (
+                <div
+                  key={option.value}
+                  onClick={() => {
+                    onChange(option.value);
+                    setOpen(false);
+                    setSearch('');
+                  }}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground',
+                    option.value === value && 'bg-accent'
+                  )}
+                >
+                  <Check className={cn('h-4 w-4', option.value === value ? 'opacity-100' : 'opacity-0')} />
+                  <div className="flex flex-col min-w-0">
+                    <span className="truncate">{option.label}</span>
+                    {option.subtitle && <span className="text-xs text-muted-foreground truncate">{option.subtitle}</span>}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 }

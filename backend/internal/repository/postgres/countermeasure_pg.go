@@ -22,21 +22,24 @@ func scanCountermeasure(scanner interface {
 	var cm domain.Countermeasure
 	err := scanner.Scan(
 		&cm.ID, &cm.RiskID, &cm.TargetType, &cm.CauseID,
-		&cm.ConsequenceID, &cm.Description, &cm.AssigneeID,
+		&cm.ConsequenceID, &cm.Description, &cm.AssigneeID, &cm.Status,
 		&cm.Deadline, &cm.CreatedAt,
 	)
 	return cm, err
 }
 
 func (r *CountermeasurePGRepo) Create(ctx context.Context, cm *domain.Countermeasure) error {
+	if cm.Status == "" {
+		cm.Status = domain.CMStatusPending
+	}
 	query := `
-		INSERT INTO countermeasures (risk_id, target_type, cause_id, consequence_id, description, assignee_id, deadline)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO countermeasures (risk_id, target_type, cause_id, consequence_id, description, assignee_id, status, deadline)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, created_at`
 
 	err := r.db.QueryRowContext(ctx, query,
 		cm.RiskID, cm.TargetType, cm.CauseID, cm.ConsequenceID,
-		cm.Description, cm.AssigneeID, cm.Deadline,
+		cm.Description, cm.AssigneeID, cm.Status, cm.Deadline,
 	).Scan(&cm.ID, &cm.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("insert countermeasure: %w", err)
@@ -46,14 +49,14 @@ func (r *CountermeasurePGRepo) Create(ctx context.Context, cm *domain.Countermea
 
 func (r *CountermeasurePGRepo) GetByID(ctx context.Context, id string) (*domain.Countermeasure, error) {
 	query := `
-		SELECT id, risk_id, target_type, cause_id, consequence_id, description, assignee_id, deadline, created_at
+		SELECT id, risk_id, target_type, cause_id, consequence_id, description, assignee_id, status, deadline, created_at
 		FROM countermeasures
 		WHERE id = $1`
 
 	var cm domain.Countermeasure
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&cm.ID, &cm.RiskID, &cm.TargetType, &cm.CauseID,
-		&cm.ConsequenceID, &cm.Description, &cm.AssigneeID,
+		&cm.ConsequenceID, &cm.Description, &cm.AssigneeID, &cm.Status,
 		&cm.Deadline, &cm.CreatedAt,
 	)
 	if err != nil {
@@ -67,7 +70,7 @@ func (r *CountermeasurePGRepo) GetByID(ctx context.Context, id string) (*domain.
 
 func (r *CountermeasurePGRepo) ListByRiskID(ctx context.Context, riskID string) ([]*domain.Countermeasure, error) {
 	query := `
-		SELECT id, risk_id, target_type, cause_id, consequence_id, description, assignee_id, deadline, created_at
+		SELECT id, risk_id, target_type, cause_id, consequence_id, description, assignee_id, status, deadline, created_at
 		FROM countermeasures
 		WHERE risk_id = $1
 		ORDER BY created_at DESC`
@@ -83,7 +86,7 @@ func (r *CountermeasurePGRepo) ListByRiskID(ctx context.Context, riskID string) 
 		var cm domain.Countermeasure
 		err := rows.Scan(
 			&cm.ID, &cm.RiskID, &cm.TargetType, &cm.CauseID,
-			&cm.ConsequenceID, &cm.Description, &cm.AssigneeID,
+			&cm.ConsequenceID, &cm.Description, &cm.AssigneeID, &cm.Status,
 			&cm.Deadline, &cm.CreatedAt,
 		)
 		if err != nil {
@@ -100,15 +103,15 @@ func (r *CountermeasurePGRepo) ListByRiskID(ctx context.Context, riskID string) 
 func (r *CountermeasurePGRepo) Update(ctx context.Context, cm *domain.Countermeasure) error {
 	query := `
 		UPDATE countermeasures
-		SET description = $1, assignee_id = $2, deadline = $3
-		WHERE id = $4
-		RETURNING id, risk_id, target_type, cause_id, consequence_id, description, assignee_id, deadline, created_at`
+		SET description = $1, assignee_id = $2, status = $3, deadline = $4
+		WHERE id = $5
+		RETURNING id, risk_id, target_type, cause_id, consequence_id, description, assignee_id, status, deadline, created_at`
 
 	err := r.db.QueryRowContext(ctx, query,
-		cm.Description, cm.AssigneeID, cm.Deadline, cm.ID,
+		cm.Description, cm.AssigneeID, cm.Status, cm.Deadline, cm.ID,
 	).Scan(
 		&cm.ID, &cm.RiskID, &cm.TargetType, &cm.CauseID,
-		&cm.ConsequenceID, &cm.Description, &cm.AssigneeID,
+		&cm.ConsequenceID, &cm.Description, &cm.AssigneeID, &cm.Status,
 		&cm.Deadline, &cm.CreatedAt,
 	)
 	if err != nil {
